@@ -31,7 +31,7 @@ jobs:
       - name: Initialize and Sync Kernel Source
         run: |
           sudo apt update -y && sudo apt install -y repo
-          repo init --depth 1 -u https://android.googlesource.com/kernel/manifest -b common-${{ matrix.kernel }}
+          repo init --depth 1 -u https://android.googlesource.com/kernel/manifest -b common-${{ matrix.kernel }}-lts
           repo sync -c --force-sync --optimized-fetch --no-tags --no-clone-bundle --prune -j$(nproc --all)
 
       - name: Add KernelSU ${{ env.ksu }}
