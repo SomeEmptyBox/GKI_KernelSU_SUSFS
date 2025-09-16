@@ -1,0 +1,59 @@
+name: Make Boot Image
+
+on:
+  issues:
+    types: opened
+
+jobs:
+  make-bootimg:
+    name: Make Boot Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract URLs from issue body
+        id: extract_links
+        run: |
+          echo "${{ github.event.issue.body }}" | grep -o -E "https?://[^[:space:]]+" > links.txt
+          echo "boot_link=$(head -n 1 links.txt)" >> $GITHUB_ENV
+          echo "kernel_link=$(tail -n 1 links.txt)" >> $GITHUB_ENV
+
+      - name: Setup mkbootimg
+        run: |
+          git clone --depth 1 https://android.googlesource.com/platform/system/tools/mkbootimg mkbootimg
+          echo "MKBOOTIMG=$GITHUB_WORKSPACE/mkbootimg/mkbootimg.py" >> $GITHUB_ENV
+          echo "UNPACK_BOOTIMG=$GITHUB_WORKSPACE/mkbootimg/unpack_bootimg.py" >> $GITHUB_ENV
+
+      - name: Make boot.img
+        run: |
+          curl -o original-boot.img "${boot_link}"
+          $UNPACK_BOOTIMG --boot_img original-boot.img --format=mkbootimg | tee mkbootimg_args
+          rm out/kernel
+          curl -o out/kernel -LSs "${kernel_link}"
+          $MKBOOTIMG $(cat mkbootimg_args) --output new-boot.img
+
+      - name: Upload boot images
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-images
+          path: |
+            *.img
+
+      - name: Add comment to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ github.event.issue.number }};
+            const artifactUrl = `https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/boot-images.zip`;
+            const commentBody = `Hey there! 👋
+
+            The new boot image has been created. You can download it from here: **${artifactUrl}**
+
+            File Name: new-boot.img
+            Run ID: ${{ github.run_id }}`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: commentBody
+            });
