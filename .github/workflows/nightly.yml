@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    paths:
+      - ".github/workflows/nightly.yml"
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        kernel:
+          - android12-5.10
+          - android13-5.10
+          - android13-5.15
+          - android14-5.15
+          - android14-6.1
+          - android15-6.6
+
+    steps:
+      - name: Initialize and Sync Kernel Source
+        run: |
+          sudo apt update -y && sudo apt install -y repo
+          repo init --depth 1 -u https://android.googlesource.com/kernel/manifest -b common-${{ matrix.kernel }}
+          repo sync -c --force-sync --optimized-fetch --no-tags --no-clone-bundle --prune -j$(nproc --all)
+
+      - name: Add KernelSU
+        working-directory: common
+        run: curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+
+      - name: Apply SUSFS Patches
+        working-directory: common
+        run: |
+          git clone --depth 1 https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ matrix.kernel }} ../susfs4ksu
+          cp ../susfs4ksu/kernel_patches/fs/* fs
+          cp ../susfs4ksu/kernel_patches/include/linux/* include/linux
+          patch -p1 < ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ matrix.kernel }}.patch
+          cd KernelSU
+          patch -p1 < ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch
+
+      - name: Fix Wifi/Bluetooth for some devices
+        working-directory: common
+        run: |
+          if [ -f BUILD.bazel ]; then
+            sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' BUILD.bazel
+          fi
+          rm android/abi_gki_protected_exports_* || echo "No protected exports!"
+
+      - name: Remove -dirty from uname
+        run: |
+          sed -i 's| -dirty||g' common/scripts/setlocalversion
+          sed -i 's| -dirty||g' build/kernel/kleaf/workspace_status_stamp.py || echo "No workspace_status_stamp.py!"
+
+      - name: Compile Kernel using build.sh
+        if: matrix.kernel == 'android12-5.10' || matrix.kernel == 'android13-5.10' || matrix.kernel == 'android13-5.15'
+        run: LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
+
+      - name: Compile Kernel using bazel
+        if: matrix.kernel == 'android14-5.15' || matrix.kernel == 'android14-6.1' || matrix.kernel == 'android15-6.6'
+        run: tools/bazel run --disk_cache=/home/runner/.cache/bazel --config=fast --config=stamp --lto=thin //common:kernel_aarch64_dist -- --dist_dir="out/${{ matrix.kernel }}/dist"
+
+      - name: Copy Kernel Image
+        run: mkdir artifacts && cp out/${{ matrix.kernel }}/dist/Image artifacts/${{ matrix.kernel }}_Image
+
+      - name: Checkout AnyKernel
+        uses: actions/checkout@v4
+        with:
+          repository: Kernel-SU/AnyKernel3
+          path: AnyKernel
+
+      - name: Make AnyKernel Zip
+        working-directory: AnyKernel
+        run: cp ../out/${{ matrix.kernel }}/dist/Image . && zip -r ../artifacts/${{ matrix.kernel }}_AnyKernel.zip .
+
+      - name: Show Output Files
+        run: ls artifacts out/${{ matrix.kernel }}/dist
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.kernel }}
+          path: artifacts
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Download KernelSU Manager
+        run: |
+          curl -o manager.zip -LSs https://nightly.link/tiann/KernelSU/workflows/build-manager/main/manager.zip
+          unzip manager.zip -d manager
+          cp $(find manager -type f) artifacts
+
+      - name: Set Release Tag and Notes
+        run: |
+          cat << EOF > release_notes.md
+
+          Links:
+          -> [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
+          -> [SUSFS Module](https://github.com/sidex15/susfs4ksu-module)
+
+          Notes:
+          -> Kernels are built on latest commit of KernelSU and SUSFS
+          -> Flash SUSFS Module and make sure SUS SU is enabled
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: KernelSU and SUSFS Nightly Release
+          tag_name: nightly
+          body_path: release_notes.md
+          prerelease: true
+          files: artifacts/*
