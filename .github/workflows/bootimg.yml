@@ -8,6 +8,7 @@ jobs:
   make-bootimg:
     name: Make Boot Image
     runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'bootimg')
 
     steps:
       - name: Extract URLs from issue body
