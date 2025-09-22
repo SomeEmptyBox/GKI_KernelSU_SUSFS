@@ -119,6 +119,11 @@ jobs:
           -> Flash SUSFS Module and make sure SUS SU is enabled
           EOF
 
+      - name: Delete Previous Release
+        run: gh release delete nightly --cleanup-tag -y
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
