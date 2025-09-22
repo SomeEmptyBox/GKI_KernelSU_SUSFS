@@ -126,4 +126,6 @@ jobs:
           tag_name: nightly
           body_path: release_notes.md
           prerelease: true
-          files: artifacts/*
+          files: |
+            artifacts/*
+            artifacts/**/*
