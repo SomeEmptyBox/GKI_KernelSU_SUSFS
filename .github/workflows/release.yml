@@ -14,8 +14,6 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    outputs:
-      ksu_version: ${{ steps.get_ksu_version.outputs.ksu_version }}
 
     strategy:
       matrix:
@@ -37,11 +35,6 @@ jobs:
       - name: Add KernelSU ${{ env.ksu }}
         working-directory: common
         run: curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s ${{ env.ksu }}
-
-      - name: Get KernelSU Version
-        id: get_ksu_version
-        working-directory: common/KernelSU
-        run: echo "ksu_version=$(expr $(git rev-list --count HEAD) "+" 10200)" >> $GITHUB_OUTPUT
 
       - name: Checkout SUSFS ${{ env.susfs }}
         run: |
@@ -116,12 +109,16 @@ jobs:
         with:
           path: artifacts
 
+      - name: Download KernelSU Manager
+        run: |
+          manager_link=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/tags/${{ env.ksu }} | grep -o '"browser_download_url": "[^"]*KernelSU[^"]*\.apk"' | cut -d'"' -f4)
+          curl -L ${manager_link} -o artifacts/KernelSU-Manager.apk
+
       - name: Set Release Tag and Notes
         run: |
           cat << EOF > release_notes.md
 
           Links:
-          -> [KernelSU Manager](https://github.com/tiann/KernelSU/releases/download/${{ env.ksu }}/KernelSU_${{ env.ksu }}_${{ needs.build.outputs.ksu_version }}-release.apk)
           -> [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
           -> [SUSFS Module](https://github.com/sidex15/susfs4ksu-module)
 
