@@ -114,28 +114,9 @@ jobs:
           manager_link=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/tags/${{ env.ksu }} | grep -o '"browser_download_url": "[^"]*KernelSU[^"]*\.apk"' | cut -d'"' -f4)
           curl -L ${manager_link} -o artifacts/KernelSU-Manager.apk
 
-      - name: Set Release Tag and Notes
-        run: |
-          cat << EOF > release_notes.md
-
-          Links:
-          -> [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
-          -> [SUSFS Module](https://github.com/sidex15/susfs4ksu-module)
-
-          Notes:
-          -> Kernels are built on stable release tag for KernelSU and SUSFS
-          -> Flash SUSFS Module and make sure SUS SU is enabled
-          EOF
-
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: KernelSU ${{ env.ksu }} and SUSFS ${{ env.susfs }}
-          tag_name: ${{ env.ksu }}-${{ env.susfs }}
-          body_path: release_notes.md
-
-      - name: Upload Release Assets
         run: |
+          gh release create "${{ env.ksu }}-${{ env.susfs }}" --title "KernelSU ${{ env.ksu }} & SUSFS ${{ env.susfs }}"
           for file in $(find artifacts -type f); do
             echo "Uploading ${file}..."
             gh release upload "${{ env.ksu }}-${{ env.susfs }}" "${file}"
