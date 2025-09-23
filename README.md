@@ -2,6 +2,10 @@
 - Follow this guide to [check your KMI](https://kernelsu.org/guide/installation.html#kmi) and find appropriate kernel from release.
 - Use Kernel Flasher (if you already have root) or Recovery (if using aosp based custom rom) to flash the AnyKernel Zip.
 
+## Releases
+- [Latest](https://github.com/SomeEmptyBox/GKI_KernelSU_SUSFS/releases/latest): Built on latest stable release of KernelSU & SUSFS, Used LTS branch of GKI Kernel.
+- [Nightly](https://github.com/SomeEmptyBox/GKI_KernelSU_SUSFS/releases/nightly): Built on latest commit of KernelSU & SUSFS, Used non-LTS branch of GKI Kernel.
+
 ## Request Boot Image
 You can request a boot image with a specific kernel if you can't use AnyKernel for any reason, follow the instructions below:
 - Upload your boot image to bashupload.com or any other place where you can get a direct download link.
