@@ -106,34 +106,10 @@ jobs:
           unzip manager.zip -d manager
           cp $(find manager -type f) artifacts/KernelSU-Manager.apk
 
-      - name: Set Release Tag and Notes
-        run: |
-          cat << EOF > release_notes.md
-
-          Links:
-          -> [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
-          -> [SUSFS Module](https://github.com/sidex15/susfs4ksu-module)
-
-          Notes:
-          -> Kernels are built on latest commit of KernelSU and SUSFS
-          -> Flash SUSFS Module and make sure SUS SU is enabled
-          EOF
-
-      - name: Delete Previous Release
-        run: gh release delete nightly --cleanup-tag -y
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: KernelSU and SUSFS Nightly Release
-          tag_name: nightly
-          body_path: release_notes.md
-          prerelease: true
-
-      - name: Upload Release Assets
         run: |
+          gh release delete "nightly" --cleanup-tag -y
+          gh release create "nightly" --title "KernelSU & SUSFS Nightly Builds" --prerelease
           for file in $(find artifacts -type f); do
             echo "Uploading ${file}..."
             gh release upload "nightly" "${file}"
