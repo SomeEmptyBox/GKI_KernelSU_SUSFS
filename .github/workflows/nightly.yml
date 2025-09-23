@@ -131,6 +131,12 @@ jobs:
           tag_name: nightly
           body_path: release_notes.md
           prerelease: true
-          files: |
-            artifacts/*
-            artifacts/**/*
+
+      - name: Upload Release Assets
+        run: |
+          for file in $(find artifacts -type f); do
+            echo "Uploading ${file}..."
+            gh release upload "nightly" "${file}"
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
