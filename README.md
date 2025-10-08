@@ -17,7 +17,7 @@ You can request a boot image with a specific kernel if you can't use AnyKernel f
 - [Example Usage](https://github.com/SomeEmptyBox/GKI_KernelSU_SUSFS/issues/11)
 
 ## Additional Resources
-- [Kernel FLasher](https://github.com/fatalcoder524/KernelFlasher): Kernel Flasher is an Android app to flash, backup, and restore kernels.
+- [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher): Kernel Flasher is an Android app to flash, backup, and restore kernels.
 - [SUSFS Module](https://github.com/sidex15/susfs4ksu-module): This module installs userspace helper tools for SUSFS.
 
 ## Acknowledgement
