@@ -75,6 +75,11 @@ jobs:
       - name: Copy Kernel Image
         run: mkdir artifacts && cp out/${{ matrix.kernel }}/dist/Image artifacts/${{ matrix.kernel }}_Image
 
+      - name: Copy Boot Images
+        working-directory: artifacts
+        if: matrix.kernel != 'android12-5.10'
+        run: cp ../out/${{ matrix.kernel }}/dist/boot-img.tar.gz ${{ matrix.kernel }}_boot-img.tar.gz
+
       - name: Checkout AnyKernel
         uses: actions/checkout@v4
         with:
