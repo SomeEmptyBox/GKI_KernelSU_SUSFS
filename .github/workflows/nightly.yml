@@ -39,9 +39,9 @@ jobs:
           git clone --depth 1 https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ matrix.kernel }} ../susfs4ksu
           cp ../susfs4ksu/kernel_patches/fs/* fs
           cp ../susfs4ksu/kernel_patches/include/linux/* include/linux
-          patch -p1 < ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ matrix.kernel }}.patch
+          patch -p1 -F3 < ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ matrix.kernel }}.patch
           cd KernelSU
-          patch -p1 < ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch
+          patch -p1 -F3 < ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch
 
       - name: Fix Wifi/Bluetooth for some devices
         working-directory: common
