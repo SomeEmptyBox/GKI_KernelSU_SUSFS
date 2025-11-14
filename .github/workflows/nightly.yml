@@ -47,6 +47,26 @@ jobs:
           cd KernelSU
           patch -p1 -F3 < ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch
 
+      - name: Append ashmem exports if missing
+        if: matrix.kernel == 'android16-6.12'
+        run: |
+          FILE=common/drivers/staging/android/ashmem.c
+          if [[ -f "$FILE" ]] && ! grep -q 'is_ashmem_file' "$FILE"; then
+          cat >>"$FILE" <<'EOF'
+
+          bool is_ashmem_file(struct file *file) { return false; }
+          int ashmem_area_name(struct file *file, char *name) { return 0; }
+          long ashmem_area_size(struct file *file) { return 0; }
+          struct file *ashmem_area_vmfile(struct file *file) { return NULL; }
+          EXPORT_SYMBOL_GPL(is_ashmem_file);
+          EXPORT_SYMBOL_GPL(ashmem_area_name);
+          EXPORT_SYMBOL_GPL(ashmem_area_size);
+          EXPORT_SYMBOL_GPL(ashmem_area_vmfile);
+          EOF
+          fi
+
+          sed -i -E 's/\$\(CONFIG_ANDROID_BINDER_IPC_RUST\)/m/g' common/drivers/android/Makefile
+
       - name: Fix Wifi/Bluetooth for some devices
         working-directory: common
         run: |
@@ -60,13 +80,17 @@ jobs:
           sed -i 's| -dirty||g' common/scripts/setlocalversion
           sed -i 's| -dirty||g' build/kernel/kleaf/workspace_status_stamp.py || echo "No workspace_status_stamp.py!"
 
-      - name: Compile Kernel using build.sh
-        if: matrix.kernel == 'android12-5.10' || matrix.kernel == 'android13-5.10' || matrix.kernel == 'android13-5.15'
-        run: LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
-
-      - name: Compile Kernel using bazel
-        if: matrix.kernel == 'android14-5.15' || matrix.kernel == 'android14-6.1' || matrix.kernel == 'android15-6.6' || matrix.kernel == 'android16-6.12'
-        run: tools/bazel run --disk_cache=/home/runner/.cache/bazel --config=fast --config=stamp --lto=thin //common:kernel_aarch64_dist -- --dist_dir="out/${{ matrix.kernel }}/dist"
+      - name: Compile Kernel
+        run: |
+          if [ -e build/build.sh ]; then
+            LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
+          else
+            if [ "${{ matrix.kernel }}" == "android16-6.12" ]; then
+              tools/bazel run --disk_cache=/home/runner/.cache/bazel --config=fast --config=stamp --lto=thin //common:kernel_aarch64_dist -- --destdir="out/${{ matrix.kernel }}/dist"
+            else
+              tools/bazel run --disk_cache=/home/runner/.cache/bazel --config=fast --config=stamp --lto=thin //common:kernel_aarch64_dist -- --dist_dir="out/${{ matrix.kernel }}/dist"
+            fi
+          fi
 
       - name: Copy Kernel Image
         run: mkdir artifacts && cp out/${{ matrix.kernel }}/dist/Image artifacts/${{ matrix.kernel }}_Image
