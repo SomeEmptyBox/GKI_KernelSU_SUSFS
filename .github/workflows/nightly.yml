@@ -21,6 +21,7 @@ jobs:
           - android14-5.15
           - android14-6.1
           - android15-6.6
+          - android16-6.12
 
     steps:
       - name: Disk Cleanup
@@ -64,7 +65,7 @@ jobs:
         run: LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
 
       - name: Compile Kernel using bazel
-        if: matrix.kernel == 'android14-5.15' || matrix.kernel == 'android14-6.1' || matrix.kernel == 'android15-6.6'
+        if: matrix.kernel == 'android14-5.15' || matrix.kernel == 'android14-6.1' || matrix.kernel == 'android15-6.6' || matrix.kernel == 'android16-6.12'
         run: tools/bazel run --disk_cache=/home/runner/.cache/bazel --config=fast --config=stamp --lto=thin //common:kernel_aarch64_dist -- --dist_dir="out/${{ matrix.kernel }}/dist"
 
       - name: Copy Kernel Image
